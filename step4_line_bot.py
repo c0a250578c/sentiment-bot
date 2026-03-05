@@ -121,25 +121,27 @@ def analyze(self, message):
         "neutral": neutral_score,
     }
 
-    def get_emotion(self, scores):
-        if scores["positive"] >= 30:
-            return "ポジティブ"
-        elif scores["negative"] >= 30:
-            return "ネガティブ"
-        else:
-            dominant = max(scores, key=scores.get)
-            emotion_map = {
-                "positive": "ポジティブ",
-                "negative": "ネガティブ",
-                "neutral": "ニュートラル",
-            }
-            return emotion_map[dominant]
 
-    def chat(self, message):
-        scores = self.analyze(message)
-        emotion = self.get_emotion(scores)
-        response = random.choice(self.responses[emotion])
-        return scores, emotion, response
+def get_emotion(self, scores):
+    if scores["positive"] >= 30:
+        return "ポジティブ"
+    elif scores["negative"] >= 30:
+        return "ネガティブ"
+    else:
+        dominant = max(scores, key=scores.get)
+        emotion_map = {
+            "positive": "ポジティブ",
+            "negative": "ネガティブ",
+            "neutral": "ニュートラル",
+        }
+        return emotion_map[dominant]
+
+
+def chat(self, message):
+    scores = self.analyze(message)
+    emotion = self.get_emotion(scores)
+    response = random.choice(self.responses[emotion])
+    return scores, emotion, response
 
 
 bot = SentimentBot()
