@@ -27,23 +27,90 @@ handler = WebhookHandler(CHANNEL_SECRET)
 class SentimentBot:
     def __init__(self):
         self.positive_words = [
-            "楽し", "嬉し", "良", "幸せ", "最高", "素晴らし",
-            "好き", "ありがとう", "感謝", "やった", "でき", "勝",
-            "ハッピー", "ラッキー", "うれし", "たのし", "わくわく",
-            "ドキドキ", "興奮", "癒", "安心", "希望", "夢",
-            "成功", "達成", "褒め", "愛し", "大好き", "最強",
-            "完璧", "神", "天才", "元気", "健康", "平和",
-            "笑", "明るい", "充実",
+            "楽し",
+            "嬉し",
+            "良",
+            "幸せ",
+            "最高",
+            "素晴らし",
+            "好き",
+            "ありがとう",
+            "感謝",
+            "やった",
+            "でき",
+            "勝",
+            "ハッピー",
+            "ラッキー",
+            "うれし",
+            "たのし",
+            "わくわく",
+            "ドキドキ",
+            "興奮",
+            "癒",
+            "安心",
+            "希望",
+            "夢",
+            "成功",
+            "達成",
+            "褒め",
+            "愛し",
+            "大好き",
+            "最強",
+            "完璧",
+            "神",
+            "天才",
+            "元気",
+            "健康",
+            "平和",
+            "笑",
+            "明るい",
+            "充実",
         ]
         self.negative_words = [
-            "悲し", "辛", "最悪", "嫌", "疲れ", "ダメ",
-            "死ね", "しんど", "つまらな", "ムカつ", "面倒", "怖",
-            "憂鬱", "落ち込", "絶望", "苦し", "痛", "泣",
-            "怒", "イライラ", "不安", "心配", "悩", "困",
-            "ストレス", "疲労", "眠れない", "寝れない", "眠れず",
-            "孤独", "寂し", "虚し", "失敗", "後悔", "恥",
-            "惨め", "つら", "きつ", "むかつ", "うざ", "最低",
-            "終わ", "もう無理", "消えたい",
+            "悲し",
+            "辛",
+            "最悪",
+            "嫌",
+            "疲れ",
+            "ダメ",
+            "死ね",
+            "しんど",
+            "つまらな",
+            "ムカつ",
+            "面倒",
+            "怖",
+            "憂鬱",
+            "落ち込",
+            "絶望",
+            "苦し",
+            "痛",
+            "泣",
+            "怒",
+            "イライラ",
+            "不安",
+            "心配",
+            "悩",
+            "困",
+            "ストレス",
+            "疲労",
+            "眠れない",
+            "寝れない",
+            "眠れず",
+            "孤独",
+            "寂し",
+            "虚し",
+            "失敗",
+            "後悔",
+            "恥",
+            "惨め",
+            "つら",
+            "きつ",
+            "むかつ",
+            "うざ",
+            "最低",
+            "終わ",
+            "もう無理",
+            "消えたい",
         ]
         self.responses = {
             "ポジティブ": [
@@ -73,7 +140,7 @@ class SentimentBot:
             if word in message:
                 is_negated = False
                 idx = message.find(word)
-                after_word = message[idx + len(word):idx + len(word) + 5]
+                after_word = message[idx + len(word) : idx + len(word) + 5]
                 for pattern in negative_patterns:
                     if pattern in after_word:
                         is_negated = True
@@ -87,13 +154,13 @@ class SentimentBot:
             if word in message:
                 is_negated = False
                 idx = message.find(word)
-                after_word = message[idx + len(word):idx + len(word) + 5]
+                after_word = message[idx + len(word) : idx + len(word) + 5]
                 for pattern in negative_patterns:
                     if pattern in after_word:
                         is_negated = True
                         break
                 if is_negated:
-                    positive_score += self.score_weight
+                    positive_score += self.score_weighti
                 else:
                     negative_score += self.score_weight
 
@@ -165,6 +232,22 @@ def handle_message(event):
             ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=reply_text)],
+            )
+        )
+
+
+@handler.add(MessageEvent)
+def handle_other_message(event):
+    if isinstance(event.message, TextMessageContent):
+        return
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message_with_http_info(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(text="テキスト以外のメッセージは対応していません😊")
+                ],
             )
         )
 
