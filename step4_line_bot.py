@@ -160,7 +160,7 @@ class SentimentBot:
                         is_negated = True
                         break
                 if is_negated:
-                    positive_score += self.score_weighti
+                    positive_score += self.score_weight
                 else:
                     negative_score += self.score_weight
 
