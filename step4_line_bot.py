@@ -111,7 +111,7 @@ class SentimentBot:
         }
 
     def get_emotion(self, scores):
-        if scores["positive"] >= 30:
+        if scores["positive"] > scores["negative"] and scores["positive"] >= 30:
             return "ポジティブ"
         elif scores["negative"] >= 30:
             return "ネガティブ"
