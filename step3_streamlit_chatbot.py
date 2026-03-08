@@ -110,22 +110,47 @@ class SentimentBot:
                 "そういうこともあるよ。きっと君なら乗り越えられる!",
             ],
         }
-        self.score_weight = 15
+        self.score_weight = 30
 
     def analyze(self, message):
-        positive_score = sum(
-            self.score_weight for word in self.positive_words if word in message
-        )
-        negative_score = sum(
-            self.score_weight for word in self.negative_words if word in message
-        )
-        neutral_score = 100 - positive_score - negative_score
+        negative_patterns = ["ない", "ず", "ません", "じゃない", "ではない"]
+        positive_score = 0
+        negative_score = 0
 
-        if neutral_score < 0:
-            neutral_score = 0
-            total = positive_score + negative_score
-            positive_score = int(positive_score * 100 / total)
-            negative_score = 100 - positive_score
+        for word in self.positive_words:
+            if word in message:
+                is_negated = False
+            idx = message.find(word)
+            after_word = message[idx + len(word) : idx + len(word) + 5]
+            for pattern in negative_patterns:
+                if pattern in after_word:
+                    is_negated = True
+                    break
+            if is_negated:
+                negative_score += self.score_weight
+            else:
+                positive_score += self.score_weight
+
+        for word in self.negative_words:
+            if word in message:
+                is_negated = False
+                idx = message.find(word)
+                after_word = message[idx + len(word) : idx + len(word) + 5]
+            for pattern in negative_patterns:
+                if pattern in after_word:
+                    is_negated = True
+                    break
+            if is_negated:
+                positive_score += self.score_weight
+            else:
+                negative_score += self.score_weight
+
+    neutral_score = 100 - positive_score - negative_score
+    if neutral_score < 0:
+        neutral_score = 0
+        total = positive_score + negative_score
+        positive_score = int(positive_score * 100 / total)
+        negative_score = 100 - positive_score
 
         return {
             "positive": positive_score,
@@ -133,28 +158,31 @@ class SentimentBot:
             "neutral": neutral_score,
         }
 
-    def get_emotion(self, scores):
-        if scores["positive"] >= 30:
-            return "ポジティブ"
-        elif scores["negative"] >= 30:
-            return "ネガティブ"
-        else:
-            dominant = max(scores, key=scores.get)
-            emotion_map = {
-                "positive": "ポジティブ",
-                "negative": "ネガティブ",
-                "neutral": "ニュートラル",
-            }
-            return emotion_map[dominant]
 
-    def generate_response(self, emotion):
-        return random.choice(self.responses[emotion])
+def get_emotion(self, scores):
+    if scores["positive"] > scores["negative"] and scores["positive"] >= 30:
+        return "ポジティブ"
+    elif scores["negative"] >= 30:
+        return "ネガティブ"
+    else:
+        dominant = max(scores, key=scores.get)
+        emotion_map = {
+            "positive": "ポジティブ",
+            "negative": "ネガティブ",
+            "neutral": "ニュートラル",
+        }
+        return emotion_map[dominant]
 
-    def chat(self, message):
-        scores = self.analyze(message)
-        emotion = self.get_emotion(scores)
-        response = self.generate_response(emotion)
-        return {"scores": scores, "emotion": emotion, "response": response}
+
+def generate_response(self, emotion):
+    return random.choice(self.responses[emotion])
+
+
+def chat(self, message):
+    scores = self.analyze(message)
+    emotion = self.get_emotion(scores)
+    response = self.generate_response(emotion)
+    return {"scores": scores, "emotion": emotion, "response": response}
 
 
 st.set_page_config(page_title="感情分析チャットボット", page_icon="💬")
