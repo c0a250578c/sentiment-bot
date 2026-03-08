@@ -6,7 +6,6 @@ import plotly.express as px
 
 class SentimentBot:
     def __init__(self):
-
         self.positive_words = [
             "楽し",
             "嬉し",
@@ -120,37 +119,37 @@ class SentimentBot:
         for word in self.positive_words:
             if word in message:
                 is_negated = False
-            idx = message.find(word)
-            after_word = message[idx + len(word) : idx + len(word) + 5]
-            for pattern in negative_patterns:
-                if pattern in after_word:
-                    is_negated = True
-                    break
-            if is_negated:
-                negative_score += self.score_weight
-            else:
-                positive_score += self.score_weight
+                idx = message.find(word)
+                after_word = message[idx + len(word) : idx + len(word) + 5]
+                for pattern in negative_patterns:
+                    if pattern in after_word:
+                        is_negated = True
+                        break
+                if is_negated:
+                    negative_score += self.score_weight
+                else:
+                    positive_score += self.score_weight
 
         for word in self.negative_words:
             if word in message:
                 is_negated = False
                 idx = message.find(word)
                 after_word = message[idx + len(word) : idx + len(word) + 5]
-            for pattern in negative_patterns:
-                if pattern in after_word:
-                    is_negated = True
-                    break
-            if is_negated:
-                positive_score += self.score_weight
-            else:
-                negative_score += self.score_weight
+                for pattern in negative_patterns:
+                    if pattern in after_word:
+                        is_negated = True
+                        break
+                if is_negated:
+                    positive_score += self.score_weight
+                else:
+                    negative_score += self.score_weight
 
-    neutral_score = 100 - positive_score - negative_score
-    if neutral_score < 0:
-        neutral_score = 0
-        total = positive_score + negative_score
-        positive_score = int(positive_score * 100 / total)
-        negative_score = 100 - positive_score
+        neutral_score = 100 - positive_score - negative_score
+        if neutral_score < 0:
+            neutral_score = 0
+            total = positive_score + negative_score
+            positive_score = int(positive_score * 100 / total)
+            negative_score = 100 - positive_score
 
         return {
             "positive": positive_score,
@@ -158,31 +157,28 @@ class SentimentBot:
             "neutral": neutral_score,
         }
 
+    def get_emotion(self, scores):
+        if scores["positive"] > scores["negative"] and scores["positive"] >= 30:
+            return "ポジティブ"
+        elif scores["negative"] >= 30:
+            return "ネガティブ"
+        else:
+            dominant = max(scores, key=scores.get)
+            emotion_map = {
+                "positive": "ポジティブ",
+                "negative": "ネガティブ",
+                "neutral": "ニュートラル",
+            }
+            return emotion_map[dominant]
 
-def get_emotion(self, scores):
-    if scores["positive"] > scores["negative"] and scores["positive"] >= 30:
-        return "ポジティブ"
-    elif scores["negative"] >= 30:
-        return "ネガティブ"
-    else:
-        dominant = max(scores, key=scores.get)
-        emotion_map = {
-            "positive": "ポジティブ",
-            "negative": "ネガティブ",
-            "neutral": "ニュートラル",
-        }
-        return emotion_map[dominant]
+    def generate_response(self, emotion):
+        return random.choice(self.responses[emotion])
 
-
-def generate_response(self, emotion):
-    return random.choice(self.responses[emotion])
-
-
-def chat(self, message):
-    scores = self.analyze(message)
-    emotion = self.get_emotion(scores)
-    response = self.generate_response(emotion)
-    return {"scores": scores, "emotion": emotion, "response": response}
+    def chat(self, message):
+        scores = self.analyze(message)
+        emotion = self.get_emotion(scores)
+        response = self.generate_response(emotion)
+        return {"scores": scores, "emotion": emotion, "response": response}
 
 
 st.set_page_config(page_title="感情分析チャットボット", page_icon="💬")
@@ -227,16 +223,12 @@ with st.sidebar:
             st.divider()
 
             st.subheader("📈 感情の推移")
-            positive_history = [m["scores"]["positive"] for m in user_messages]
-            negative_history = [m["scores"]["negative"] for m in user_messages]
-            neutral_history = [m["scores"]["neutral"] for m in user_messages]
-
             df = pd.DataFrame(
                 {
                     "会話番号": range(1, len(user_messages) + 1),
-                    "ポジティブ": positive_history,
-                    "ネガティブ": negative_history,
-                    "ニュートラル": neutral_history,
+                    "ポジティブ": [m["scores"]["positive"] for m in user_messages],
+                    "ネガティブ": [m["scores"]["negative"] for m in user_messages],
+                    "ニュートラル": [m["scores"]["neutral"] for m in user_messages],
                 }
             )
             st.line_chart(df.set_index("会話番号"))
@@ -310,7 +302,6 @@ for msg in st.session_state.messages:
             col2.metric("😢 ネガティブ", f"{msg['scores']['negative']}%")
             col3.metric("😐 ニュートラル", f"{msg['scores']['neutral']}%")
 
-            st.write("**感情スコアの詳細：**")
             st.progress(
                 msg["scores"]["positive"] / 100,
                 text=f"😊 ポジティブ: {msg['scores']['positive']}%",
@@ -344,4 +335,4 @@ if user_input:
         {"role": "assistant", "content": result["response"]}
     )
 
-    st.rerun()
+st.rerun()
