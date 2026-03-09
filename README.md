@@ -1,5 +1,9 @@
 # 💬 感情分析チャットボット / Sentiment Analysis Chatbot
-
+![Python](https://img.shields.io/badge/Python-3.14-blue?logo=python)
+![pytest](https://img.shields.io/badge/pytest-13%20passed-brightgreen?logo=pytest)
+![LINE Bot](https://img.shields.io/badge/LINE%20Bot-deployed-00C300?logo=line)
+![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?logo=railway)
+![License](https://img.shields.io/badge/license-MIT-green)
 > 日本語テキストをリアルタイムで感情分析し、ポジティブ・ネガティブ・ニュートラルをスコアリングするチャットボット。
 > LINE Bot・Webアプリの2形式で動作します。
 
