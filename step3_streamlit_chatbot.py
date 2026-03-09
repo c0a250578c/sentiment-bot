@@ -61,6 +61,82 @@ def clear_db():
     conn.close()
 
 
+def apply_custom_css(emotion=None):
+    if emotion == "ポジティブ":
+        accent = "#00D09C"
+        bg_chat = "rgba(0, 208, 156, 0.08)"
+    elif emotion == "ネガティブ":
+        accent = "#FF4B4B"
+        bg_chat = "rgba(255, 75, 75, 0.08)"
+    else:
+        accent = "#7C83FD"
+        bg_chat = "rgba(124, 131, 253, 0.08)"
+
+    st.markdown(
+        f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        html, body, [class*="css"] {{
+            font-family: 'Noto Sans JP', sans-serif;
+        }}
+
+        .stApp {{
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background-color: #161B22;
+            border-right: 1px solid #30363D;
+        }}
+
+        .stChatMessage {{
+            background-color: {bg_chat};
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 8px;
+            transition: background-color 0.5s ease;
+        }}
+
+        .stChatInputContainer {{
+            border-top: 2px solid {accent};
+        }}
+
+        .stButton > button {{
+            background-color: {accent};
+            color: white;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }}
+
+        .stButton > button:hover {{
+            opacity: 0.8;
+        }}
+
+        h1 {{
+            color: {accent} !important;
+            font-weight: 700;
+        }}
+
+        .stMetric {{
+            background-color: #161B22;
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid {accent}44;
+        }}
+
+        .stProgress > div > div {{
+            background-color: {accent};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 class SentimentBot:
     def __init__(self):
         self.positive_words = [
@@ -240,14 +316,19 @@ class SentimentBot:
 
 init_db()
 
-st.set_page_config(page_title="感情分析チャットボット", page_icon="💬")
-st.title("💬 感情分析チャットボット")
-st.caption("あなたのメッセージを感情分析します")
+st.set_page_config(page_title="感情分析チャットボット", page_icon="💬", layout="wide")
 
 if "bot" not in st.session_state:
     st.session_state.bot = SentimentBot()
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "last_emotion" not in st.session_state:
+    st.session_state.last_emotion = None
+
+apply_custom_css(st.session_state.last_emotion)
+
+st.title("💬 感情分析チャットボット")
+st.caption("あなたのメッセージをリアルタイムで感情分析します")
 
 with st.sidebar:
     st.header("📊 統計情報")
@@ -261,10 +342,10 @@ with st.sidebar:
         avg_negative = sum(r[3] for r in db_messages) / len(db_messages)
         avg_neutral = sum(r[4] for r in db_messages) / len(db_messages)
 
-        st.subheader("平均感情スコア")
-        st.write(f"😊 ポジティブ: {avg_positive:.1f}%")
-        st.write(f"😢 ネガティブ: {avg_negative:.1f}%")
-        st.write(f"😐 ニュートラル: {avg_neutral:.1f}%")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("😊", f"{avg_positive:.0f}%")
+        col2.metric("😢", f"{avg_negative:.0f}%")
+        col3.metric("😐", f"{avg_neutral:.0f}%")
 
         st.divider()
 
@@ -300,8 +381,14 @@ with st.sidebar:
             color_discrete_map={
                 "ポジティブ": "#00D09C",
                 "ネガティブ": "#FF4B4B",
-                "ニュートラル": "#808495",
+                "ニュートラル": "#7C83FD",
             },
+            hole=0.4,
+        )
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white"),
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -322,7 +409,7 @@ with st.sidebar:
             .encode("utf-8-sig")
         )
         st.download_button(
-            label="📥 会話履歴をCSVで保存",
+            label="📥 CSVで保存",
             data=csv,
             file_name="sentiment_history.csv",
             mime="text/csv",
@@ -333,9 +420,10 @@ with st.sidebar:
         st.info("まだメッセージがありません")
 
     st.divider()
-    if st.button("🗑️ 会話履歴をクリア", use_container_width=True):
+    if st.button("🗑️ 履歴をクリア", use_container_width=True):
         clear_db()
         st.session_state.messages = []
+        st.session_state.last_emotion = None
         st.rerun()
 
 for msg in st.session_state.messages:
@@ -347,16 +435,13 @@ for msg in st.session_state.messages:
             col2.metric("😢 ネガティブ", f"{msg['scores']['negative']}%")
             col3.metric("😐 ニュートラル", f"{msg['scores']['neutral']}%")
             st.progress(
-                msg["scores"]["positive"] / 100,
-                text=f"😊 ポジティブ: {msg['scores']['positive']}%",
+                msg["scores"]["positive"] / 100, text=f"😊 {msg['scores']['positive']}%"
             )
             st.progress(
-                msg["scores"]["negative"] / 100,
-                text=f"😢 ネガティブ: {msg['scores']['negative']}%",
+                msg["scores"]["negative"] / 100, text=f"😢 {msg['scores']['negative']}%"
             )
             st.progress(
-                msg["scores"]["neutral"] / 100,
-                text=f"😐 ニュートラル: {msg['scores']['neutral']}%",
+                msg["scores"]["neutral"] / 100, text=f"😐 {msg['scores']['neutral']}%"
             )
             if "emotion" in msg:
                 st.info(f"🎯 主な感情: {msg['emotion']}")
@@ -366,6 +451,7 @@ user_input = st.chat_input("メッセージを入力...")
 if user_input:
     result = st.session_state.bot.chat(user_input)
     save_message(user_input, result["scores"], result["emotion"])
+    st.session_state.last_emotion = result["emotion"]
 
     st.session_state.messages.append(
         {
