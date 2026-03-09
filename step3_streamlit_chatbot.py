@@ -323,14 +323,16 @@ user_input = st.chat_input("メッセージを入力...")
 if user_input:
     result = st.session_state.bot.chat(user_input)
 
-st.session_state.messages.append(
-    {
-        "role": "user",
-        "content": user_input,
-        "scores": result["scores"],
-        "emotion": result["emotion"],
-    }
-)
-st.session_state.messages.append({"role": "assistant", "content": result["response"]})
+    st.session_state.messages.append(
+        {
+            "role": "user",
+            "content": user_input,
+            "scores": result["scores"],
+            "emotion": result["emotion"],
+        }
+    )
+    st.session_state.messages.append(
+        {"role": "assistant", "content": result["response"]}
+    )
 
-st.rerun()
+    st.rerun()
