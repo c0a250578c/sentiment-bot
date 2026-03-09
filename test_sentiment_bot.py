@@ -43,7 +43,7 @@ class TestAnalyze:
     class TestGetEmotion:
         def test_positive_emotion(self):
             "ポジティブ判定"
-            scores = {"postive": 60, "negative": 0, "neutral": 40}
+            scores = {"positive": 60, "negative": 0, "neutral": 40}
             assert bot.get_emotion(scores) == "ポジティブ"
 
         def test_negative_emotion(self):
