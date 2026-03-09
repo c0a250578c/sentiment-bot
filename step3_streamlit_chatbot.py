@@ -2,6 +2,63 @@ import streamlit as st
 import random
 import pandas as pd
 import plotly.express as px
+import sqlite3
+from datetime import datetime
+
+
+def init_db():
+    conn = sqlite3.connect("chat_history.db")
+    c = conn.cursor()
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            message TEXT,
+            positive INTEGER,
+            negative INTEGER,
+            neutral INTEGER,
+            emotion TEXT
+        )"""
+    )
+    conn.commit()
+    conn.close()
+
+
+def save_message(message, scores, emotion):
+    conn = sqlite3.connect("chat_history.db")
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO messages (timestamp, message, positive, negative, neutral, emotion) VALUES (?,?,?,?,?,?)",
+        (
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            message,
+            scores["positive"],
+            scores["negative"],
+            scores["neutral"],
+            emotion,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def load_messages():
+    conn = sqlite3.connect("chat_history.db")
+    c = conn.cursor()
+    c.execute(
+        "SELECT timestamp, message, positive, negative, neutral, emotion FROM messages ORDER BY id"
+    )
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+def clear_db():
+    conn = sqlite3.connect("chat_history.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM messages")
+    conn.commit()
+    conn.close()
 
 
 class SentimentBot:
@@ -181,115 +238,103 @@ class SentimentBot:
         return {"scores": scores, "emotion": emotion, "response": response}
 
 
+init_db()
+
 st.set_page_config(page_title="感情分析チャットボット", page_icon="💬")
 st.title("💬 感情分析チャットボット")
 st.caption("あなたのメッセージを感情分析します")
 
 if "bot" not in st.session_state:
     st.session_state.bot = SentimentBot()
+if "messages" not in st.session_state:
     st.session_state.messages = []
 
 with st.sidebar:
     st.header("📊 統計情報")
 
-    if st.session_state.messages:
-        total_messages = len(
-            [m for m in st.session_state.messages if m["role"] == "user"]
+    db_messages = load_messages()
+
+    if db_messages:
+        st.metric("総会話回数", len(db_messages))
+
+        avg_positive = sum(r[2] for r in db_messages) / len(db_messages)
+        avg_negative = sum(r[3] for r in db_messages) / len(db_messages)
+        avg_neutral = sum(r[4] for r in db_messages) / len(db_messages)
+
+        st.subheader("平均感情スコア")
+        st.write(f"😊 ポジティブ: {avg_positive:.1f}%")
+        st.write(f"😢 ネガティブ: {avg_negative:.1f}%")
+        st.write(f"😐 ニュートラル: {avg_neutral:.1f}%")
+
+        st.divider()
+
+        st.subheader("📈 感情の推移")
+        df = pd.DataFrame(
+            db_messages,
+            columns=[
+                "日時",
+                "メッセージ",
+                "ポジティブ",
+                "ネガティブ",
+                "ニュートラル",
+                "感情",
+            ],
         )
-        st.metric("会話回数", total_messages)
+        df["会話番号"] = range(1, len(df) + 1)
+        st.line_chart(
+            df.set_index("会話番号")[["ポジティブ", "ネガティブ", "ニュートラル"]]
+        )
 
-        user_messages = [
-            m
-            for m in st.session_state.messages
-            if m["role"] == "user" and "scores" in m
-        ]
+        st.divider()
 
-        if user_messages:
-            avg_positive = sum(m["scores"]["positive"] for m in user_messages) / len(
-                user_messages
-            )
-            avg_negative = sum(m["scores"]["negative"] for m in user_messages) / len(
-                user_messages
-            )
-            avg_neutral = sum(m["scores"]["neutral"] for m in user_messages) / len(
-                user_messages
-            )
+        st.subheader("🎨 感情の割合")
+        emotion_counts = {
+            "ポジティブ": sum(1 for r in db_messages if r[5] == "ポジティブ"),
+            "ネガティブ": sum(1 for r in db_messages if r[5] == "ネガティブ"),
+            "ニュートラル": sum(1 for r in db_messages if r[5] == "ニュートラル"),
+        }
+        fig = px.pie(
+            values=list(emotion_counts.values()),
+            names=list(emotion_counts.keys()),
+            color=list(emotion_counts.keys()),
+            color_discrete_map={
+                "ポジティブ": "#00D09C",
+                "ネガティブ": "#FF4B4B",
+                "ニュートラル": "#808495",
+            },
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-            st.subheader("平均感情スコア")
-            st.write(f"😊 ポジティブ: {avg_positive:.1f}%")
-            st.write(f"😢 ネガティブ: {avg_negative:.1f}%")
-            st.write(f"😐 ニュートラル: {avg_neutral:.1f}%")
+        st.divider()
 
-            st.divider()
-
-            st.subheader("📈 感情の推移")
-            df = pd.DataFrame(
-                {
-                    "会話番号": range(1, len(user_messages) + 1),
-                    "ポジティブ": [m["scores"]["positive"] for m in user_messages],
-                    "ネガティブ": [m["scores"]["negative"] for m in user_messages],
-                    "ニュートラル": [m["scores"]["neutral"] for m in user_messages],
-                }
-            )
-            st.line_chart(df.set_index("会話番号"))
-
-            st.divider()
-
-            st.subheader("🎨 感情の割合")
-            emotion_counts = {
-                "ポジティブ": sum(
-                    1 for m in user_messages if m.get("emotion") == "ポジティブ"
-                ),
-                "ネガティブ": sum(
-                    1 for m in user_messages if m.get("emotion") == "ネガティブ"
-                ),
-                "ニュートラル": sum(
-                    1 for m in user_messages if m.get("emotion") == "ニュートラル"
-                ),
-            }
-
-            fig = px.pie(
-                values=list(emotion_counts.values()),
-                names=list(emotion_counts.keys()),
-                color=list(emotion_counts.keys()),
-                color_discrete_map={
-                    "ポジティブ": "#00D09C",
-                    "ネガティブ": "#FF4B4B",
-                    "ニュートラル": "#808495",
-                },
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.divider()
-
-            csv_data = []
-            for i, m in enumerate(user_messages, 1):
-                csv_data.append(
-                    {
-                        "会話番号": i,
-                        "メッセージ": m["content"],
-                        "ポジティブ(%)": m["scores"]["positive"],
-                        "ネガティブ(%)": m["scores"]["negative"],
-                        "ニュートラル(%)": m["scores"]["neutral"],
-                        "主な感情": m["emotion"],
-                    }
-                )
-            df_csv = pd.DataFrame(csv_data)
-            csv = df_csv.to_csv(index=False).encode("utf-8-sig")
-
-            st.download_button(
-                label="📥 会話履歴をCSVで保存",
-                data=csv,
-                file_name="sentiment_history.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
+        csv = (
+            df[
+                [
+                    "日時",
+                    "メッセージ",
+                    "ポジティブ",
+                    "ネガティブ",
+                    "ニュートラル",
+                    "感情",
+                ]
+            ]
+            .to_csv(index=False)
+            .encode("utf-8-sig")
+        )
+        st.download_button(
+            label="📥 会話履歴をCSVで保存",
+            data=csv,
+            file_name="sentiment_history.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
 
     else:
         st.info("まだメッセージがありません")
 
     st.divider()
     if st.button("🗑️ 会話履歴をクリア", use_container_width=True):
+        clear_db()
         st.session_state.messages = []
         st.rerun()
 
@@ -301,7 +346,6 @@ for msg in st.session_state.messages:
             col1.metric("😊 ポジティブ", f"{msg['scores']['positive']}%")
             col2.metric("😢 ネガティブ", f"{msg['scores']['negative']}%")
             col3.metric("😐 ニュートラル", f"{msg['scores']['neutral']}%")
-
             st.progress(
                 msg["scores"]["positive"] / 100,
                 text=f"😊 ポジティブ: {msg['scores']['positive']}%",
@@ -314,7 +358,6 @@ for msg in st.session_state.messages:
                 msg["scores"]["neutral"] / 100,
                 text=f"😐 ニュートラル: {msg['scores']['neutral']}%",
             )
-
             if "emotion" in msg:
                 st.info(f"🎯 主な感情: {msg['emotion']}")
 
@@ -322,6 +365,7 @@ user_input = st.chat_input("メッセージを入力...")
 
 if user_input:
     result = st.session_state.bot.chat(user_input)
+    save_message(user_input, result["scores"], result["emotion"])
 
     st.session_state.messages.append(
         {
@@ -334,5 +378,4 @@ if user_input:
     st.session_state.messages.append(
         {"role": "assistant", "content": result["response"]}
     )
-
     st.rerun()
