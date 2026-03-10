@@ -215,3 +215,5 @@ MIT License
 ---
 
 _このプロジェクトはPythonとWeb開発の学習を目的として個人で開発しました。_
+## 📝 記事
+- [Pythonで日本語感情分析LINE Botを作った話 - Qiita](あなたの記事URL)
